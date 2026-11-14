@@ -37,9 +37,11 @@ final class AppCatalog {
 
     static Set<String> browsers(PackageManager pm) {
         Set<String> out = new HashSet<>();
-        Intent view = new Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com")).addCategory(Intent.CATEGORY_BROWSABLE);
-        List<ResolveInfo> ris = pm.queryIntentActivities(view, PackageManager.MATCH_ALL);
-        for (ResolveInfo ri : ris) out.add(ri.activityInfo.packageName);
+        try {
+            Intent view = new Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com")).addCategory(Intent.CATEGORY_BROWSABLE);
+            List<ResolveInfo> ris = pm.queryIntentActivities(view, PackageManager.MATCH_ALL);
+            for (ResolveInfo ri : ris) out.add(ri.activityInfo.packageName);
+        } catch (Exception ignored) {}
         return out;
     }
 
@@ -64,13 +66,13 @@ final class AppCatalog {
         return system ? "System" : "Other";
     }
 
-    /** Every app that has a launcher icon. */
+    /** Every app that has a launcher icon or can be used. */
     static JSONArray list(Context ctx) {
         PackageManager pm = ctx.getPackageManager();
         Map<String, JSONObject> out = new LinkedHashMap<>();
+        Set<String> browsers = browsers(pm);
         try {
             Intent main = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
-            Set<String> browsers = browsers(pm);
             for (ResolveInfo ri : pm.queryIntentActivities(main, 0)) {
                 ActivityInfo ai = ri.activityInfo;
                 String pkg = ai.packageName;
@@ -84,7 +86,25 @@ final class AppCatalog {
                 o.put("system", system);
                 out.put(pkg, o);
             }
-        } catch (Exception ignored) { /* an empty list is shown, the rest of the app still works */ }
+        } catch (Exception ignored) { }
+
+        try {
+            List<ApplicationInfo> installed = pm.getInstalledApplications(0);
+            for (ApplicationInfo a : installed) {
+                String pkg = a.packageName;
+                if (pkg.equals(ctx.getPackageName()) || out.containsKey(pkg)) continue;
+                boolean isSystemOnly = (a.flags & ApplicationInfo.FLAG_SYSTEM) != 0 && (a.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0;
+                if (!isSystemOnly || browsers.contains(pkg) || "com.android.settings".equals(pkg) || pkg.contains("chrome") || pkg.contains("youtube")) {
+                    JSONObject o = new JSONObject();
+                    o.put("id", pkg);
+                    o.put("name", String.valueOf(pm.getApplicationLabel(a)));
+                    o.put("category", category(a, browsers.contains(pkg)));
+                    o.put("system", isSystemOnly);
+                    out.put(pkg, o);
+                }
+            }
+        } catch (Exception ignored) { }
+
         JSONArray arr = new JSONArray();
         for (JSONObject o : out.values()) arr.put(o);
         return arr;
@@ -93,7 +113,6 @@ final class AppCatalog {
     /** Apps that are music players: their foreground services count as "playing with the screen off". */
     static Set<String> audioApps(Context ctx) {
         Set<String> out = new HashSet<>();
-        PackageManager pm = ctx.getPackageManager();
         try {
             JSONArray l = list(ctx);
             for (int i = 0; i < l.length(); i++) if ("Music".equals(l.getJSONObject(i).optString("category"))) out.add(l.getJSONObject(i).getString("id"));

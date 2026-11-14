@@ -333,6 +333,53 @@ function watchData(){
   setInterval(go,60000);
 }
 
+function updateAreaChartScrub(svg, clientX) {
+  if (!svg) return;
+  const rect = svg.getBoundingClientRect();
+  const W = 340, H = 176, pl = 8, pr = 8, pt = 22, pb = 24;
+  const relX = Math.max(0, Math.min(rect.width, clientX - rect.left)) / Math.max(1, rect.width) * W;
+  const vals = (svg.dataset.vals || '').split(',').map(Number);
+  const n = vals.length;
+  if (!n) return;
+  const k = Math.max(0, Math.min(n - 1, Math.round((relX - pl) / Math.max(1, W - pl - pr) * (n - 1))));
+  const max = Math.max(...vals, 1) * 1.15;
+  const x = pl + k * (W - pl - pr) / Math.max(1, n - 1);
+  const y = pt + (1 - (vals[k] || 0) / max) * (H - pt - pb);
+  const dot = svg.querySelector('.ac-dot');
+  const guide = svg.querySelector('.ac-guide');
+  const txt = svg.querySelector('.ac-txt');
+  if (dot) { dot.setAttribute('cx', x.toFixed(1)); dot.setAttribute('cy', y.toFixed(1)); }
+  if (guide) { guide.setAttribute('x1', x.toFixed(1)); guide.setAttribute('x2', x.toFixed(1)); guide.style.display = 'block'; }
+  if (txt) {
+    txt.setAttribute('x', Math.max(56, Math.min(W - 56, x)).toFixed(1));
+    txt.setAttribute('y', Math.max(12, y - 11).toFixed(1));
+    txt.textContent = hLabel(k) + ' · ' + (vals[k] || 0) + 'm';
+  }
+}
+
+let activeAreaSvg = null;
+document.addEventListener('pointerdown', e => {
+  const svg = e.target.closest('[data-chart="area"]');
+  if (svg) {
+    activeAreaSvg = svg;
+    updateAreaChartScrub(svg, e.clientX);
+    try { svg.setPointerCapture(e.pointerId); } catch (_) {}
+  }
+});
+document.addEventListener('pointermove', e => {
+  if (activeAreaSvg) {
+    updateAreaChartScrub(activeAreaSvg, e.clientX);
+  }
+});
+const endAreaScrub = e => {
+  if (activeAreaSvg) {
+    try { activeAreaSvg.releasePointerCapture(e.pointerId); } catch (_) {}
+    activeAreaSvg = null;
+  }
+};
+document.addEventListener('pointerup', endAreaScrub);
+document.addEventListener('pointercancel', endAreaScrub);
+
 async function boot(){
   $$('img[data-logo]').forEach(i=>{i.src=LOGO});
   $('#gear').innerHTML=IC.gear;

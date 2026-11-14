@@ -16,15 +16,18 @@ import org.json.JSONArray;
  *   - blocks the app (time limit, locked hours, detox challenge) with a full-screen message,
  *   - shows a short countdown before an app that has a limit,
  *   - leaves a Shorts / Reels feed, a blocked website, or a page with a blocked word,
- *   - adds up the time spent on websites in browsers.
- * It never sends anything anywhere. Every step is wrapped so a bad app screen can never crash it.
+ *   - adds up the time spent on websites,
+ *   - records page/content titles for timeline breakdown (what was open).
  */
 public class BlockerService extends AccessibilityService {
-    private final Map<String, Long> allowedUntil = new HashMap<>();   // pause screen answered "continue": left alone for 10 min
-    private String lastPkg = "", lastHost = null;
-    private long lastScan = 0, lastSiteTs = 0, lastAction = 0;
+    private String lastPkg = "", lastHost = "";
+    private long lastScan = 0, lastAction = 0, lastSiteTs = 0;
+    private final Map<String, Long> allowedUntil = new HashMap<>();   // app -> pause bypass expiry
     private Set<String> browsers = new HashSet<>();
     private long browsersAt = 0;
+
+    private String lastRecordedPkg = "", lastRecordedTitle = "";
+    private long lastPageScan = 0, lastRecordTime = 0;
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent ev) {
@@ -33,8 +36,13 @@ public class BlockerService extends AccessibilityService {
             String pkg = ev.getPackageName().toString();
             if (pkg.equals(getPackageName())) { return; }
             int type = ev.getEventType();
-            if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) onWindow(pkg);
-            else if (type == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) onContent(pkg);
+            if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                onWindow(pkg);
+                inspectPage(pkg, ev);
+            } else if (type == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+                onContent(pkg);
+                inspectPage(pkg, null);
+            }
         } catch (Throwable ignored) { /* never crash */ }
     }
 
@@ -130,5 +138,31 @@ public class BlockerService extends AccessibilityService {
         }
         lastHost = host;
         lastSiteTs = now;
+    }
+
+    /** Inspects and records page/content titles for timeline breakdown */
+    private void inspectPage(String pkg, AccessibilityEvent ev) {
+        long now = System.currentTimeMillis();
+        if (now - lastPageScan < 700) return;
+        lastPageScan = now;
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return;
+        try {
+            boolean browser = isBrowser(pkg);
+            String title = PageDetector.detect(root, pkg, browser, ev);
+            if (title != null && !title.trim().isEmpty()) {
+                title = title.trim();
+                if (title.length() > 70) title = title.substring(0, 70);
+                if (!pkg.equals(lastRecordedPkg) || !title.equals(lastRecordedTitle) || now - lastRecordTime > 180000L) {
+                    lastRecordedPkg = pkg;
+                    lastRecordedTitle = title;
+                    lastRecordTime = now;
+                    Store.get(this).addPage(now, pkg, title);
+                }
+            }
+        } catch (Throwable ignored) {
+        } finally {
+            root.recycle();
+        }
     }
 }

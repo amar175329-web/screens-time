@@ -25,12 +25,17 @@ function area(v,o={}){
   const labs=(o.labels||[]).map(([i,t])=>`<text class="ax" x="${x(i)}" y="${H-6}" text-anchor="${i===0?'start':i===n-1?'end':'middle'}">${t}</text>`).join('');
   const now=o.now!=null?`<line x1="${x(o.now)}" x2="${x(o.now)}" y1="${pt-4}" y2="${H-pb}" style="stroke:var(--mute)" stroke-dasharray="3 4"/><text class="ax" x="${x(o.now)+4}" y="${H-pb-6}" text-anchor="start">now</text>`:'';
   const c=o.c||'var(--acc)';
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(o.aria||'Usage over time')}">
-  <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:${c};stop-opacity:.42"/><stop offset="1" style="stop-color:${c};stop-opacity:0"/></linearGradient></defs>
-  ${grid}<path d="${line}L${x(n-1)},${H-pb}L${x(0)},${H-pb}Z" style="fill:url(#${id})"/>
+  return `<svg class="area-chart" id="${id}" data-chart="area" data-vals="${v.join(',')}" data-peak="${pk}" data-color="${c}" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(o.aria||'Usage over time')}" style="touch-action:none;user-select:none;-webkit-user-select:none;cursor:ew-resize">
+  <defs><linearGradient id="${id}_g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:${c};stop-opacity:.42"/><stop offset="1" style="stop-color:${c};stop-opacity:0"/></linearGradient></defs>
+  ${grid}<path d="${line}L${x(n-1)},${H-pb}L${x(0)},${H-pb}Z" style="fill:url(#${id}_g)"/>
   <path d="${line}" fill="none" style="stroke:${c}" stroke-width="2.5" stroke-linecap="round"/>
-  ${now}<circle cx="${px}" cy="${py}" r="5" style="fill:var(--surf);stroke:${c}" stroke-width="2.5"/>
-  <text class="ax" x="${tx}" y="${Math.max(12,py-11)}" text-anchor="middle" style="fill:var(--fg)">${o.peak?o.peak(pk,v[pk]):''}</text>${labs}</svg>`;
+  ${now}
+  <line class="ac-guide" x1="${px}" x2="${px}" y1="${pt-2}" y2="${H-pb}" style="stroke:${c};opacity:.35;display:none" stroke-width="1.5" stroke-dasharray="3 3"/>
+  <circle class="ac-dot" cx="${px}" cy="${py}" r="5.5" style="fill:var(--surf);stroke:${c}" stroke-width="2.5"/>
+  <text class="ax ac-txt" x="${tx}" y="${Math.max(12,py-11)}" text-anchor="middle" style="fill:var(--fg);font-weight:700">${o.peak?o.peak(pk,v[pk]):''}</text>
+  ${labs}
+  <rect class="ac-hit" x="0" y="0" width="${W}" height="${H}" fill="transparent" style="cursor:ew-resize"/>
+  </svg>`;
 }
 function bars(v,o={}){
   const W=340,H=o.h||176,pl=6,pr=6,pt=24,pb=24,n=v.length,base=H-pb;

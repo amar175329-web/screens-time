@@ -32,9 +32,12 @@ final class UsageReader {
             String kind = null;
             switch (type) {
                 case 1: kind = "fg"; break;            // ACTIVITY_RESUMED / MOVE_TO_FOREGROUND
-                case 2: kind = "bg"; break;            // ACTIVITY_PAUSED / MOVE_TO_BACKGROUND
+                case 2:                                // ACTIVITY_PAUSED / MOVE_TO_BACKGROUND
+                case 23:                               // ACTIVITY_STOPPED
+                case 24: kind = "bg"; break;           // ACTIVITY_DESTROYED
                 case 15: kind = "screenOn"; break;     // SCREEN_INTERACTIVE
-                case 16: kind = "screenOff"; break;    // SCREEN_NON_INTERACTIVE
+                case 16:                               // SCREEN_NON_INTERACTIVE
+                case 17: kind = "screenOff"; break;    // KEYGUARD_SHOWN
                 case 18: kind = "unlock"; break;       // KEYGUARD_HIDDEN
                 case 26: kind = "shutdown"; break;     // DEVICE_SHUTDOWN
                 case 19:                               // FOREGROUND_SERVICE_START
