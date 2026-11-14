@@ -175,12 +175,10 @@ final class PageDetector {
             }
         }
         if (root != null) {
-            if (Build.VERSION.SDK_INT >= 28) {
-                CharSequence winTitle = root.getTitle();
-                if (winTitle != null && winTitle.length() > 1 && winTitle.length() <= 50) {
-                    String s = winTitle.toString().trim();
-                    if (!s.isEmpty() && !s.equalsIgnoreCase(pkg)) return s;
-                }
+            CharSequence cd = root.getContentDescription();
+            if (cd != null && cd.length() > 1 && cd.length() <= 50) {
+                String s = cd.toString().trim();
+                if (!s.isEmpty() && !s.equalsIgnoreCase(pkg) && !s.contains("http")) return s;
             }
             String[] commonHeaderIds = {
                     pkg + ":id/action_bar_title",
