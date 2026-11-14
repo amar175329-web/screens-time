@@ -1,0 +1,3 @@
+/* Plus Jakarta Sans, stored with the app so it also works offline (the Android app has no internet need).
+   The files are fetched once by `node tools/fetch-fonts.mjs`. Until then the phone's own font is used, which looks fine too. */
+@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:400 800;font-display:swap;src:local('Plus Jakarta Sans'),url('../fonts/PlusJakartaSans.woff2') format('woff2')}

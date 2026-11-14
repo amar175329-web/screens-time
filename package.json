@@ -1,0 +1,23 @@
+{
+  "name": "screens-time",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Screens Time: a simple, friendly screen-time tracker (web app + Android app)",
+  "scripts": {
+    "test": "node --test tests/engine.test.js",
+    "dev": "npx serve www",
+    "fonts": "node tools/fetch-fonts.mjs",
+    "build:single": "python3 tools/build_single.py",
+    "android:setup": "node tools/setup-android.mjs",
+    "android:sync": "npx cap sync android",
+    "android:apk": "node tools/setup-android.mjs && npx cap sync android && cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

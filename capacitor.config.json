@@ -1,0 +1,6 @@
+{
+  "appId": "app.screenstime",
+  "appName": "Screens Time",
+  "webDir": "www",
+  "server": { "androidScheme": "https" }
+}
