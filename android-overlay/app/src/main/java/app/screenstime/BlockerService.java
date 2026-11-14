@@ -143,7 +143,7 @@ public class BlockerService extends AccessibilityService {
     /** Inspects and records page/content titles for timeline breakdown */
     private void inspectPage(String pkg, AccessibilityEvent ev) {
         long now = System.currentTimeMillis();
-        if (now - lastPageScan < 700) return;
+        if (ev == null && now - lastPageScan < 600) return;
         lastPageScan = now;
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return;
@@ -153,7 +153,7 @@ public class BlockerService extends AccessibilityService {
             if (title != null && !title.trim().isEmpty()) {
                 title = title.trim();
                 if (title.length() > 70) title = title.substring(0, 70);
-                if (!pkg.equals(lastRecordedPkg) || !title.equals(lastRecordedTitle) || now - lastRecordTime > 180000L) {
+                if (!pkg.equals(lastRecordedPkg) || !title.equals(lastRecordedTitle) || now - lastRecordTime > 120000L) {
                     lastRecordedPkg = pkg;
                     lastRecordedTitle = title;
                     lastRecordTime = now;

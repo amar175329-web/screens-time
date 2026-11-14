@@ -221,7 +221,7 @@ function hourBody(h){
     if(x.t==='bg'){const a=APPS[x.a];rows+=`<div class="ev bgev"><span class="evt">${tm(x.s)}</span>${ico(a,'sm')}<div class="grow"><div class="t ell">${esc(a.n)}</div><div class="s">Playing with the screen off</div></div><div class="t">${x.d}m</div></div>`;return}
     if(prevFg&&prevFg.s-x.e>=5)rows+=`<div class="gap">Screen off for ${fm(prevFg.s-x.e)}</div>`;
     const a=APPS[x.a],pg=a.pg[x.p]||'';
-    rows+=`<button class="ev" data-act="app" data-id="${esc(a.id)}"><span class="evt">${tm(x.s)}</span>${ico(a,'sm')}<div class="grow"><div class="t ell">${esc(a.n)}</div><div class="s ell">${esc(pg||'Opened')}</div></div><div class="tr">${x.unl?'<span class="pill good">Unlocked</span> ':''}<span class="t">${x.d}m</span></div></button>`;
+    rows+=`<button class="ev" data-act="app" data-id="${esc(a.id)}"><span class="evt">${tm(x.s)}</span>${ico(a,'sm')}<div class="grow"><div class="t ell">${esc(a.n)}</div><div class="s ell">${esc(pg||a.cat||'App session')}</div></div><div class="tr">${x.unl?'<span class="pill good">Unlocked</span> ':''}<span class="t">${x.d}m</span></div></button>`;
     prevFg=x;
   });
   return `<div class="hb2"><div class="evs">${rows||'<div class="s">No details for this hour.</div>'}</div></div>`;

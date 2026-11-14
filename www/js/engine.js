@@ -82,7 +82,7 @@
     const pagesBy = new Map();
     (raw.pages || []).forEach(p => { if (!p || !ids.has(p.app)) return; if (!pagesBy.has(p.app)) pagesBy.set(p.app, []); pagesBy.get(p.app).push(p); });
     pagesBy.forEach(l => l.sort((a, b) => a.t - b.t));
-    const pageAt = (app, t) => { const l = pagesBy.get(app); if (!l) return null; let r = null; for (const p of l) { if (p.t <= t) r = p; else break; } return r && t - r.t < 3600000 ? r.title : null; };
+    const pageAt = (app, t) => { const l = pagesBy.get(app); if (!l) return null; let r = null; for (const p of l) { if (p.t <= t + 10000) r = p; else break; } return r && Math.abs(t - r.t) < 3600000 ? r.title : null; };
     const pageIdx = (a, title) => { if (!title) return -1; let k = a.pg.indexOf(title); if (k < 0) { a.pg.push(title); k = a.pg.length - 1; } return k; };
 
     const SESS = [], secMin = new Map();           // minute -> Map(appIdx -> ms)
@@ -98,7 +98,9 @@
         const s = cuts[c], e = cuts[c + 1];
         if (e - s < MIN_SESSION && cuts.length > 2) continue;
         const sm = Math.floor((s - start) / MIN), em = Math.max(sm + 1, Math.ceil((e - start) / MIN));
-        SESS.push({ a: ai, p: pageIdx(APPS[ai], pageAt(it.app, s)), s: sm, e: em, d: Math.max(1, Math.round((e - s) / MIN)), ms: s, unl: false });
+        let title = pageAt(it.app, s);
+        if (!title && c === 0 && cuts.length > 2) title = pageAt(it.app, cuts[1]);
+        SESS.push({ a: ai, p: pageIdx(APPS[ai], title), s: sm, e: em, d: Math.max(1, Math.round((e - s) / MIN)), ms: s, unl: false });
       }
       /* minute accounting */
       appMs[ai] += it.e - it.s;
@@ -116,7 +118,7 @@
 
     const MM = new Int16Array(DAY_MIN).fill(-1), PG = new Int16Array(DAY_MIN).fill(-1), BG = new Uint8Array(DAY_MIN);
     secMin.forEach((mp, m) => { let best = -1, bm = 0; mp.forEach((ms, ai) => { if (ms > bm) { bm = ms; best = ai; } }); if (bm >= 5000) MM[m] = best; });
-    SESS.forEach(x => { for (let m = x.s; m < x.e && m < DAY_MIN; m++) if (MM[m] === x.a) PG[m] = x.p; });
+    SESS.forEach(x => { for (let m = x.s; m < x.e && m < DAY_MIN; m++) if (MM[m] === x.a && x.p >= 0) PG[m] = x.p; });
 
     /* totals: exact seconds first, then integers that add up */
     const tApp = roundSum(appMs.map(v => v / MIN));

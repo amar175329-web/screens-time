@@ -66,17 +66,38 @@ final class AppCatalog {
         return system ? "System" : "Other";
     }
 
+    /** Packages that act as home launcher or system desktop - never counted as screen-time apps */
+    static Set<String> launchers(PackageManager pm) {
+        Set<String> set = new HashSet<>();
+        try {
+            Intent home = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME);
+            List<ResolveInfo> ris = pm.queryIntentActivities(home, PackageManager.MATCH_ALL);
+            for (ResolveInfo ri : ris) {
+                if (ri.activityInfo != null) set.add(ri.activityInfo.packageName);
+            }
+        } catch (Exception ignored) {}
+        set.add("com.android.systemui");
+        return set;
+    }
+
     /** Every app that has a launcher icon or can be used. */
     static JSONArray list(Context ctx) {
+        return list(ctx, null);
+    }
+
+    /** Every app that has a launcher icon, was used, or is installed. */
+    static JSONArray list(Context ctx, Set<String> usedPackages) {
         PackageManager pm = ctx.getPackageManager();
         Map<String, JSONObject> out = new LinkedHashMap<>();
         Set<String> browsers = browsers(pm);
+        Set<String> launchers = launchers(pm);
+
         try {
             Intent main = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
             for (ResolveInfo ri : pm.queryIntentActivities(main, 0)) {
                 ActivityInfo ai = ri.activityInfo;
                 String pkg = ai.packageName;
-                if (pkg.equals(ctx.getPackageName()) || out.containsKey(pkg)) continue;
+                if (pkg.equals(ctx.getPackageName()) || launchers.contains(pkg) || out.containsKey(pkg)) continue;
                 ApplicationInfo a = ai.applicationInfo;
                 boolean system = (a.flags & ApplicationInfo.FLAG_SYSTEM) != 0 && (a.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0;
                 JSONObject o = new JSONObject();
@@ -92,7 +113,7 @@ final class AppCatalog {
             List<ApplicationInfo> installed = pm.getInstalledApplications(0);
             for (ApplicationInfo a : installed) {
                 String pkg = a.packageName;
-                if (pkg.equals(ctx.getPackageName()) || out.containsKey(pkg)) continue;
+                if (pkg.equals(ctx.getPackageName()) || launchers.contains(pkg) || out.containsKey(pkg)) continue;
                 boolean isSystemOnly = (a.flags & ApplicationInfo.FLAG_SYSTEM) != 0 && (a.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0;
                 if (!isSystemOnly || browsers.contains(pkg) || "com.android.settings".equals(pkg) || pkg.contains("chrome") || pkg.contains("youtube")) {
                     JSONObject o = new JSONObject();
@@ -104,6 +125,26 @@ final class AppCatalog {
                 }
             }
         } catch (Exception ignored) { }
+
+        // Also ensure any app that recorded usage events is registered so its minutes are never discarded
+        if (usedPackages != null) {
+            for (String pkg : usedPackages) {
+                if (pkg == null || pkg.equals(ctx.getPackageName()) || launchers.contains(pkg) || out.containsKey(pkg)) continue;
+                try {
+                    ApplicationInfo a = pm.getApplicationInfo(pkg, 0);
+                    boolean isSystemOnly = (a.flags & ApplicationInfo.FLAG_SYSTEM) != 0 && (a.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0;
+                    JSONObject o = new JSONObject();
+                    o.put("id", pkg);
+                    o.put("name", String.valueOf(pm.getApplicationLabel(a)));
+                    o.put("category", category(a, browsers.contains(pkg)));
+                    o.put("system", isSystemOnly);
+                    out.put(pkg, o);
+                } catch (Exception ignored) {}
+            }
+        }
+
+        // Final sanity check: ensure no launcher or system UI leaked into the list
+        for (String l : launchers) out.remove(l);
 
         JSONArray arr = new JSONArray();
         for (JSONObject o : out.values()) arr.put(o);

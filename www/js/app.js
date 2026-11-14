@@ -16,7 +16,7 @@ function closeBk(){clearInterval(S.tmp.pt);$('#bk')?.remove()}
 function appSheet(id){
   const a=appById(id);if(!a)return `<div class="grab"></div><div class="rowx between"><div class="h2">App</div>${CLOSE}</div>`;
   const i=IDX.get(id),launches=opens(i);
-  const pages={};for(let m=0;m<=NOW;m++)if(MM[m]===i){const p=a.pg[PG[m]]||'Opened';pages[p]=(pages[p]||0)+1}
+  const pages={};for(let m=0;m<=NOW;m++)if(MM[m]===i){const p=a.pg[PG[m]];if(p&&p!=='Opened')pages[p]=(pages[p]||0)+1}
   const pl=Object.entries(pages).sort((x,y)=>y[1]-x[1]).slice(0,8);
   const L=S.limits.find(l=>l.kind==='app'&&l.app===id);
   const avg=Math.round((RANGE.week[id]||0)/Math.max(1,WEEK.filter(q=>q>0).length));
@@ -24,7 +24,8 @@ function appSheet(id){
   <div class="rowx between" style="align-items:flex-end"><div><div class="lbl">Today</div><div class="big">${fm(a.t)}</div></div>${L?(L.min-a.t<0?`<span class="pill bad">${fm(a.t-L.min)} over limit</span>`:`<span class="pill good">${fm(L.min-a.t)} left</span>`):''}</div>
   <div class="stats"><div class="stat"><span>Daily average</span><b>${fm(avg)}</b></div><div class="stat"><span>Opened</span><b>${launches}x</b></div><div class="stat"><span>Notifications</span><b>${a.nf}</b></div></div>
   ${a.t?`<section class="card stack"><div class="lbl">Minutes per hour</div>${area(AH[i],{c:a.c,labels:[[0,'12a'],[6,'6a'],[12,'12p'],[18,'6p'],[23,'11p']],now:NOW/60,peak:(k,q)=>`${hLabel(k)} · ${q}m`,aria:a.n+' per hour'})}</section>`:''}
-  ${pl.length?`<section class="card tight"><div class="sec" style="padding:12px 0 2px"><span class="lbl">What was open</span></div>${pl.map(([p,m])=>`<div class="row"><div class="grow"><div class="t ell" style="font-size:13.5px">${esc(p)}</div><div class="bar mt" style="--c:${a.c}"><i style="width:${m/pl[0][1]*100}%"></i></div></div><span class="mono t">${m}m</span></div>`).join('')}</section>`:''}
+  ${pl.length?`<section class="card tight"><div class="sec" style="padding:12px 0 2px"><span class="lbl">What was open</span></div>${pl.map(([p,m])=>`<div class="row"><div class="grow"><div class="t ell" style="font-size:13.5px">${esc(p)}</div><div class="bar mt" style="--c:${a.c}"><i style="width:${(m/pl[0][1]*100).toFixed(1)}%"></i></div></div><span class="mono t">${m}m</span></div>`).join('')}</section>`
+  :`<section class="card tight"><div class="sec" style="padding:12px 0 2px"><span class="lbl">What was open</span></div><p class="s" style="margin:4px 0 8px;font-size:13px">Activity details (pages, chats, videos) appear here as you use ${esc(a.n)}.</p></section>`}
   <button class="btn block" data-act="${L?'limedit':'limfor'}" data-id="${esc(L?L.id:id)}">${L?'Edit daily limit':'Set a daily limit'}</button>`;
 }
 function delSheet(id){

@@ -71,17 +71,46 @@ public class ScreensTimePlugin extends Plugin {
                 boolean full = sinceArg <= 0;
                 long since = full ? now - 10 * DAY : sinceArg;
                 Store store = Store.get(ctx);
-                JSONArray apps = AppCatalog.list(ctx);
-                if (full) { store.upsertKnown(apps); store.prune(now); }
                 JSONObject usage = UsageReader.read(ctx, since, now);
+
+                java.util.Set<String> used = new java.util.HashSet<>();
+                JSONArray usedArr = usage.optJSONArray("usedPackages");
+                if (usedArr != null) {
+                    for (int i = 0; i < usedArr.length(); i++) used.add(usedArr.getString(i));
+                }
+                JSONArray apps = AppCatalog.list(ctx, used);
+                if (full) { store.upsertKnown(apps); store.prune(now); }
+
+                // Combine pages: store pages (accessibility detections) + usage class fallback pages
+                JSONArray storePages = store.pagesSince(since);
+                JSONArray fallbackPages = usage.optJSONArray("pages");
+                JSONArray combinedPages = new JSONArray();
+                if (storePages != null) {
+                    for (int i = 0; i < storePages.length(); i++) combinedPages.put(storePages.get(i));
+                }
+                if (fallbackPages != null) {
+                    for (int i = 0; i < fallbackPages.length(); i++) combinedPages.put(fallbackPages.get(i));
+                }
+
+                // Combine notifications: store notifs + UsageEvents interruption events
+                JSONArray storeNotifs = store.notifsSince(UsageMath.startOfToday());
+                JSONArray ueNotifs = usage.optJSONArray("notifications");
+                JSONArray combinedNotifs = new JSONArray();
+                if (storeNotifs != null) {
+                    for (int i = 0; i < storeNotifs.length(); i++) combinedNotifs.put(storeNotifs.get(i));
+                }
+                if (ueNotifs != null) {
+                    for (int i = 0; i < ueNotifs.length(); i++) combinedNotifs.put(ueNotifs.get(i));
+                }
+
                 JSONObject out = new JSONObject();
                 out.put("now", now);
                 out.put("apps", apps);
                 out.put("known", store.known());
                 out.put("events", usage.getJSONArray("events"));
                 out.put("background", usage.getJSONArray("background"));
-                out.put("pages", store.pagesSince(since));
-                out.put("notifications", store.notifsSince(UsageMath.startOfToday()));
+                out.put("pages", combinedPages);
+                out.put("notifications", combinedNotifs);
                 out.put("history", store.history());
                 out.put("siteMinutes", store.siteMinutes(UsageMath.todayKey()));
                 out.put("pause", new JSONObject().put("tries", store.pauseDeclinedSince(now - DAY)).put("savedMin", 0));

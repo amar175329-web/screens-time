@@ -202,7 +202,43 @@ final class PageDetector {
                     }
                 } catch (Exception ignored) {}
             }
+            String top = findTopHeader(root, pkg, 0);
+            if (top != null) return top;
         }
+        return null;
+    }
+
+    private static String findTopHeader(AccessibilityNodeInfo node, String pkg, int depth) {
+        if (node == null || depth > 8) return null;
+        android.graphics.Rect r = new android.graphics.Rect();
+        try {
+            node.getBoundsInScreen(r);
+            if (r.top < 450 && r.bottom > 50 && r.height() > 20) {
+                CharSequence txt = node.getText();
+                if (txt != null && txt.length() > 1 && txt.length() <= 60) {
+                    String s = txt.toString().trim();
+                    if (!s.isEmpty() && !s.equalsIgnoreCase(pkg) && !s.matches("^\\d{1,2}:\\d{2}.*") && !s.matches("^\\d+%$") && !s.contains("http")) {
+                        return s;
+                    }
+                }
+                CharSequence desc = node.getContentDescription();
+                if (desc != null && desc.length() > 1 && desc.length() <= 60) {
+                    String s = desc.toString().trim();
+                    if (!s.isEmpty() && !s.equalsIgnoreCase(pkg) && !s.matches("^\\d{1,2}:\\d{2}.*") && !s.matches("^\\d+%$") && !s.contains("http")) {
+                        return s;
+                    }
+                }
+            }
+            int count = node.getChildCount();
+            for (int i = 0; i < count; i++) {
+                AccessibilityNodeInfo child = node.getChild(i);
+                if (child != null) {
+                    String found = findTopHeader(child, pkg, depth + 1);
+                    child.recycle();
+                    if (found != null) return found;
+                }
+            }
+        } catch (Exception ignored) {}
         return null;
     }
 }
